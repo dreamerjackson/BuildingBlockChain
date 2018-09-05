@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"crypto/sha256"
 	"fmt"
-	"time"
 )
 
 type Block struct {
@@ -15,6 +14,7 @@ type Block struct {
 	Timestamp     int64
 	nBits         int64
 	Nonce         int64
+
 }
 
 func (b *Block) serialize() []byte{
@@ -33,8 +33,10 @@ func (b *Block) setHash() []byte{
 }
 
 func main(){
-	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100}
-	fmt.Printf("%x",block.serialize())
+	//block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100}
+	//fmt.Printf("%x",block.serialize())
+	newtx :=NewCoinbaseTX("tom")
+	fmt.Printf("%s",newtx.Vout)
 }
 
 
