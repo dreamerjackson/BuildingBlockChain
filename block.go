@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"encoding/hex"
+	"time"
 )
 
 type Block struct {
@@ -101,23 +102,32 @@ func	TestFuncTransactionToMerkletree(){
 	fmt.Printf("%x\n",TestcreateMerkelTreeRoot(Transactions))
 }
 func Test_blockSerialize(){
-	//block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100}
-	//fmt.Printf("%x",block.serialize())
+	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{}}
+	fmt.Printf("%x",block.serialize())
 }
 func Test_NewCoinbaseTX(){
-	//newtx :=NewCoinbaseTX("tom")
-	//fmt.Printf("%s",newtx.Vout)
+	newtx :=NewCoinbaseTX("tom")
+	fmt.Printf("%s",newtx.Vout)
 
 }
 
 func Test_NewBlockSerialize(){
-	//block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100}
-	//fmt.Printf("%x",block.serialize())
+	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{}}
+	fmt.Printf("%x",block.serialize())
 
+}
+
+func Test_NewPow(){
+	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{}}
+	pow := NewProofOfWork(block)
+	nonce,_ :=pow.Run()
+	block.Nonce = nonce
+	fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
 }
 func main(){
 
-	TestFuncTransactionToMerkletree()
+	//TestFuncTransactionToMerkletree()
+	Test_NewPow()
 
 
 }

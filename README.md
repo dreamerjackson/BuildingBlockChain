@@ -1,5 +1,4 @@
 # BuildingBlockChain
 
 
->complete struct of traction, the simple serialize of traction and the coinbase first traction.
->test and printf the first traction
+>this part is about pow , though the proofofwork.go, compelte the pow and test it in block.go
