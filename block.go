@@ -7,26 +7,57 @@ import (
 	"fmt"
 	"encoding/hex"
 	"time"
+	"encoding/gob"
+	"log"
 )
-
+//序列化时，使用了encoding/gob，切记必须要大些
 type Block struct {
-	version       int64
+	Version       int64
 	PrevBlockHash []byte
 	MerkleRoot    []byte
 	Timestamp     int64
-	nBits         int64
+	Nbits         int64
 	Nonce         int64
 	Transactions  []*Transaction
+	Hash          []byte
 }
 
+
+//废弃
 func (b *Block) serialize() []byte{
 	timestamp := []byte(strconv.FormatInt(b.Timestamp, 10))
-	nBits := []byte(strconv.FormatInt(b.nBits, 10))
+	nBits := []byte(strconv.FormatInt(b.Nbits, 10))
 	Nonce :=[]byte(strconv.FormatInt(b.Nonce, 10))
-	result := bytes.Join([][]byte{IntToHex64(b.version),b.PrevBlockHash,b.MerkleRoot,timestamp,nBits,Nonce}, []byte{})
+	result := bytes.Join([][]byte{IntToHex64(b.Version),b.PrevBlockHash,b.MerkleRoot,timestamp,nBits,Nonce}, []byte{})
 	return result
 }
 
+
+// Serialize serializes the block
+func (b *Block) Serialize() []byte {
+	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
+
+	err := encoder.Encode(b)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return result.Bytes()
+}
+
+// DeserializeBlock deserializes a block
+func DeserializeBlock(d []byte) *Block {
+	var block Block
+
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	err := decoder.Decode(&block)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return &block
+}
 
 func (b *Block) setHash() []byte{
 	hash := sha256.Sum256(b.serialize())
@@ -102,7 +133,7 @@ func	TestFuncTransactionToMerkletree(){
 	fmt.Printf("%x\n",TestcreateMerkelTreeRoot(Transactions))
 }
 func Test_blockSerialize(){
-	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{}}
+	block := &Block{int64(2),[]byte("abc"),[]byte("dfg"),time.Now().Unix(),int64(111111),100,[]*Transaction{},[]byte{}}
 	fmt.Printf("%x",block.serialize())
 }
 func Test_NewCoinbaseTX(){
@@ -112,23 +143,88 @@ func Test_NewCoinbaseTX(){
 }
 
 func Test_NewBlockSerialize(){
-	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{}}
+	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{},[]byte{}}
 	fmt.Printf("%x",block.serialize())
 
 }
 
 func Test_NewPow(){
-	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{}}
+	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{},[]byte{}}
 	pow := NewProofOfWork(block)
 	nonce,_ :=pow.Run()
 	block.Nonce = nonce
 	fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
 }
+//产生初始区块
+func NewGenesisBlock() *Block {
+	block :=&Block{int64(2),[]byte{},[]byte("abc"),time.Now().Unix(),111111,100,[]*Transaction{},[]byte{}}
+	pow := NewProofOfWork(block)
+	nonce, hash := pow.Run()
+	block.Hash = hash[:]
+	block.Nonce = nonce
+	//fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
+	fmt.Printf("Prev. version: %s\n", strconv.FormatInt(block.Version,10))
+	fmt.Printf("Prev. hash: %x\n",block.PrevBlockHash)
+	fmt.Printf("merkleroot: %s\n", block.MerkleRoot)
+	fmt.Printf("time: %s\n", strconv.FormatInt(block.Timestamp,10))
+	fmt.Printf("nbits: %s\n", strconv.FormatInt(block.Nbits,10))
+	fmt.Printf("nonce: %s\n", strconv.FormatInt(block.Nonce,10))
+	fmt.Printf("Hash: %x\n", block.Hash)
+	fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
+	fmt.Printf("------------------------------------------------------------\n")
+	fmt.Println()
+	return block
+	}
+
+func NewBlock(prevBlockHash []byte) *Block{
+	block :=&Block{2,prevBlockHash,[]byte("dfg"),time.Now().Unix(),111111,0,[]*Transaction{},[]byte{}}
+	pow := NewProofOfWork(block)
+	nonce, hash := pow.Run()
+	block.Hash = hash[:]
+	block.Nonce = nonce
+
+	return block
+
+}
+
+
+func TestSerialize(){
+	//k :=&Blocktest{[]byte("jhg"),[]byte("abc"),time.Now().Unix(),100,[]*Transaction{},[]byte{}}
+	//block := DeserializeBlock2(k.Serialize())
+	////fmt.Printf("Prev. version: %s\n", strconv.FormatInt(block.version,10))
+	//fmt.Printf("Prev. hash: %x\n",block.PrevBlockHash)
+	//fmt.Printf("merkleroot: %s\n", block.MerkleRoot)
+	//fmt.Printf("time: %s\n", strconv.FormatInt(block.Timestamp,10))
+	////fmt.Printf("nbits: %s\n", strconv.FormatInt(block.nBits,10))
+	//fmt.Printf("nonce: %s\n", strconv.FormatInt(block.Version,10))
+	//fmt.Printf("Hash: %x\n", block.Hash)
+	////fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
+	//fmt.Printf("------------------------------------------------------------\n")
+	//fmt.Println()
+}
+
+func TestBoltDB(){
+	//NewBlockchain() mean i can create a genesis block if the DBfile is not exist.
+	// i will get the data from DBfile if the DBfile is exist.
+	blockchian :=NewBlockchain()
+	blockchian.AddBlock()
+	blockchian.AddBlock()
+	blockchian.printChain()
+
+}
+
+
 func main(){
 
 	//TestFuncTransactionToMerkletree()
-	Test_NewPow()
+	//Test_NewPow()
 
+	//block:=NewGenesisBlock()
+	//fmt.Printf("%x",block.Nonce)
+
+
+
+	TestBoltDB()
 
 }
 

@@ -10,7 +10,6 @@ import (
 
 const maxNonce = math.MaxInt64
 
-
 const targetBits = 16
 
 // ProofOfWork represents a proof-of-work
@@ -28,15 +27,16 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 
 	return pow
 }
+
 //serialize the block
 func (pow *ProofOfWork) prepareData(nonce int64) []byte {
 	data := bytes.Join(
 		[][]byte{
-			IntToHex64(pow.block.version),
+			IntToHex64(pow.block.Version),
 			pow.block.PrevBlockHash,
 			pow.block.MerkleRoot,
 			IntToHex64(pow.block.Timestamp),
-			IntToHex64(pow.block.nBits),
+			IntToHex64(pow.block.Nbits),
 			IntToHex64(nonce),
 		},
 		[]byte{},
@@ -58,9 +58,12 @@ func (pow *ProofOfWork) Run() (int64, []byte) {
 	//continue the nonce until the hash result <= targetBits
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
-		firsthash :=sha256.Sum256(data)
+		firsthash := sha256.Sum256(data)
 		hash = sha256.Sum256(firsthash[:])
-		fmt.Printf("\r%x\n", hash)
+		//if nonce==5{
+		//	fmt.Printf("\rnonce:%x,%x\n", nonce,hash)
+		//}
+
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {
@@ -79,8 +82,10 @@ func (pow *ProofOfWork) Validate() bool {
 	var hashInt big.Int
 
 	data := pow.prepareData(pow.block.Nonce)
-	firsthash :=sha256.Sum256(data)
+	firsthash := sha256.Sum256(data)
 	hash := sha256.Sum256(firsthash[:])
+
+	fmt.Printf("\r%x\n", pow.block.Nonce)
 	hashInt.SetBytes(hash[:])
 
 	isValid := hashInt.Cmp(pow.target) == -1
