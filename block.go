@@ -211,7 +211,7 @@ func TestBoltDB(){
 	blockchian.AddBlock()
 	blockchian.printChain()
 
-}
+	}
 
 
 func main(){
