@@ -1,6 +1,12 @@
 # BuildingBlockChain
 
 
->1、修改了序列化方法，使用了encodeing/gob
->2、修改了结构体的属性，必须要大些，才能使用gob
->3、增加结构体blockchian，使用boltdb数据库，测试了从初始化区块链—增加区块链——循环遍历区块链的全过程
+>1、增加了cli.go，代表增加命令行的工具，如，输入 go build .,
+>./BuildingBlockChain printblock then will excute the cli.printfchain
+ >后期会改进，参考ss源代码：
+<!-- var configFile string
+	flag.StringVar(&configFile, "k", "config.json", "specify config file")
+	flag.Parse()
+	log.Printf("closing port %s\n", configFile) -->
+
+  >2.将main函数单独出来main.go

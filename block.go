@@ -212,20 +212,3 @@ func TestBoltDB(){
 	blockchian.printChain()
 
 	}
-
-
-func main(){
-
-	//TestFuncTransactionToMerkletree()
-	//Test_NewPow()
-
-	//block:=NewGenesisBlock()
-	//fmt.Printf("%x",block.Nonce)
-
-
-
-	TestBoltDB()
-
-}
-
-
