@@ -155,9 +155,9 @@ func Test_NewPow(){
 	block.Nonce = nonce
 	fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
 }
-//产生初始区块
-func NewGenesisBlock() *Block {
-	block :=&Block{int64(2),[]byte{},[]byte("abc"),time.Now().Unix(),111111,100,[]*Transaction{},[]byte{}}
+//产生初始区块,传入了第一笔coinbase交易
+func NewGenesisBlock(transactions []*Transaction) *Block {
+	block :=&Block{int64(2),[]byte{},[]byte("abc"),time.Now().Unix(),111111,100,transactions,[]byte{}}
 	pow := NewProofOfWork(block)
 	nonce, hash := pow.Run()
 	block.Hash = hash[:]
@@ -176,8 +176,8 @@ func NewGenesisBlock() *Block {
 	return block
 	}
 
-func NewBlock(prevBlockHash []byte) *Block{
-	block :=&Block{2,prevBlockHash,[]byte("dfg"),time.Now().Unix(),111111,0,[]*Transaction{},[]byte{}}
+func NewBlock(transactions []*Transaction, prevBlockHash []byte) *Block{
+	block :=&Block{2,prevBlockHash,[]byte("dfg"),time.Now().Unix(),111111,0,transactions,[]byte{}}
 	pow := NewProofOfWork(block)
 	nonce, hash := pow.Run()
 	block.Hash = hash[:]

@@ -53,16 +53,53 @@ func (cli *CLI) printChain() {
 	}
 }
 
+
+func (cli *CLI) send(from, to string, amount int) {
+	bc := NewBlockchain()
+	defer bc.db.Close()
+	fmt.Println("33333!")
+	tx := NewUTXOTransaction(from, to, amount, bc)
+	fmt.Println("444444!")
+	bc.MineBlock([]*Transaction{tx})
+	fmt.Println("Success!")
+}
+
+
+func (cli *CLI) getBalance(address string) {
+	bc := NewBlockchain()
+	defer bc.db.Close()
+
+	balance := 0
+	UTXOs := bc.FindUTXO(address)
+
+	for _, out := range UTXOs {
+		balance += out.Value
+	}
+
+	fmt.Printf("Balance of '%s': %d\n", address, balance)
+}
+
+
+
+
 // Run parses command line arguments and processes commands
 func (cli *CLI) Run() {
 	cli.validateArgs()
 
 	addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
-
-
-
+	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
+	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
+	sendFrom := sendCmd.String("from", "", "Source wallet address")
+	sendTo := sendCmd.String("to", "", "Destination wallet address")
+	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
+	getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
 	switch os.Args[1] {
+	case "getbalance":
+		err := getBalanceCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
 	case "addblock":
 		err := addBlockCmd.Parse(os.Args[2:])
 		if err != nil {
@@ -73,16 +110,39 @@ func (cli *CLI) Run() {
 		if err != nil {
 			log.Panic(err)
 		}
+	case "send":
+		err := sendCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
+
 	default:
 		cli.printUsage()
 		os.Exit(1)
 	}
 
+	if getBalanceCmd.Parsed() {
+		if *getBalanceAddress == "" {
+			getBalanceCmd.Usage()
+			os.Exit(1)
+		}
+		cli.getBalance(*getBalanceAddress)
+	}
 	if addBlockCmd.Parsed() {
 		cli.addBlock()
 	}
 
 	if printChainCmd.Parsed() {
 		cli.printChain()
+	}
+
+
+	if sendCmd.Parsed() {
+		if *sendFrom == "" || *sendTo == "" || *sendAmount <= 0 {
+			sendCmd.Usage()
+			os.Exit(1)
+		}
+
+		cli.send(*sendFrom, *sendTo, *sendAmount)
 	}
 }
