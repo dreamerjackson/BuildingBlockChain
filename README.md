@@ -22,4 +22,5 @@
     $ ./BuildingBlockChain getbalance -address Helen
     Balance of 'Helen': 2
 
-
+查看对比：
+https://github.com/dreamerjackson/BuildingBlockChain/compare
