@@ -206,9 +206,9 @@ func TestSerialize(){
 func TestBoltDB(){
 	//NewBlockchain() mean i can create a genesis block if the DBfile is not exist.
 	// i will get the data from DBfile if the DBfile is exist.
-	blockchian :=NewBlockchain()
-	blockchian.AddBlock()
-	blockchian.AddBlock()
-	blockchian.printChain()
+	//blockchian :=NewBlockchain()  已经修改
+	//blockchian.AddBlock()
+	//blockchian.AddBlock()
+	//blockchian.printChain()
 
 	}

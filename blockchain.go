@@ -107,7 +107,7 @@ func dbExists() bool {
 // NewBlockchain creates a new Blockchain with genesis Block
 //NewBlockchain() mean i can create a genesis block if the DBfile is not exist.
 // i will get the data from DBfile if the DBfile is exist.
-func NewBlockchain() *Blockchain {
+func NewBlockchain(address string) *Blockchain {
 
 
 	var tip []byte
@@ -121,7 +121,7 @@ func NewBlockchain() *Blockchain {
 
 		if b == nil {
 			fmt.Println("No existing blockchain found. Creating a new one...")
-			transaction:=NewCoinbaseTX("tom")
+			transaction:=NewCoinbaseTX(address)
 			genesis := NewGenesisBlock([]*Transaction{transaction})
 
 			b, err := tx.CreateBucket([]byte(blocksBucket))

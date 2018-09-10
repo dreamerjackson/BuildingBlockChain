@@ -52,7 +52,17 @@ func change( num int32) [4]byte{
 	return buffle2
 }
 
-//大小端转换
+
+// ReverseBytes reverses a byte array
+//大小端转换第1种方式。
+func ReverseBytes(data []byte) {
+	for i, j := 0, len(data)-1; i < j; i, j = i+1, j-1 {
+		data[i], data[j] = data[j], data[i]
+	}
+}
+
+
+//大小端转换第2种方式
 func reverse2(data []byte) []byte{
 	var s [][]byte
 	for i:=len(data);i>0;i--{

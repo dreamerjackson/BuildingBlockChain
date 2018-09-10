@@ -55,18 +55,18 @@ func (cli *CLI) printChain() {
 
 
 func (cli *CLI) send(from, to string, amount int) {
-	bc := NewBlockchain()
+	bc := NewBlockchain(to)
 	defer bc.db.Close()
-	fmt.Println("33333!")
+
 	tx := NewUTXOTransaction(from, to, amount, bc)
-	fmt.Println("444444!")
+
 	bc.MineBlock([]*Transaction{tx})
 	fmt.Println("Success!")
 }
 
 
 func (cli *CLI) getBalance(address string) {
-	bc := NewBlockchain()
+	bc := NewBlockchain(address)
 	defer bc.db.Close()
 
 	balance := 0
@@ -80,6 +80,25 @@ func (cli *CLI) getBalance(address string) {
 }
 
 
+func (cli *CLI) createWallet() {
+	wallets, _ := NewWallets()
+	address := wallets.CreateWallet()
+	wallets.SaveToFile()
+
+	fmt.Printf("Your new address: %s\n", address)
+}
+
+func (cli *CLI) listAddresses() {
+	wallets, err := NewWallets()
+	if err != nil {
+		log.Panic(err)
+	}
+	addresses := wallets.GetAddresses()
+
+	for _, address := range addresses {
+		fmt.Println(address)
+	}
+}
 
 
 // Run parses command line arguments and processes commands
@@ -90,6 +109,9 @@ func (cli *CLI) Run() {
 	printChainCmd := flag.NewFlagSet("printchain", flag.ExitOnError)
 	sendCmd := flag.NewFlagSet("send", flag.ExitOnError)
 	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
+	createWalletCmd := flag.NewFlagSet("createwallet", flag.ExitOnError)
+	listAddressesCmd := flag.NewFlagSet("listaddresses", flag.ExitOnError)
+
 	sendFrom := sendCmd.String("from", "", "Source wallet address")
 	sendTo := sendCmd.String("to", "", "Destination wallet address")
 	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
@@ -115,7 +137,16 @@ func (cli *CLI) Run() {
 		if err != nil {
 			log.Panic(err)
 		}
-
+	case "createwallet":
+		err := createWalletCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
+	case "listaddresses":
+		err := listAddressesCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -144,5 +175,13 @@ func (cli *CLI) Run() {
 		}
 
 		cli.send(*sendFrom, *sendTo, *sendAmount)
+	}
+
+	if createWalletCmd.Parsed() {
+		cli.createWallet()
+	}
+
+	if listAddressesCmd.Parsed() {
+		cli.listAddresses()
 	}
 }
