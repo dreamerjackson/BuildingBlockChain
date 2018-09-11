@@ -13,7 +13,7 @@
 
 
 测试：
-、、、
+```
 localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 1LrW1JzBooC5uELS4My4t1Kv1K2xgFnZpY
 Balance of '1LrW1JzBooC5uELS4My4t1Kv1K2xgFnZpY': 0
 localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 1Fa8U2ETHCQQHqhLwHS91xuURo8DXakRY1
@@ -49,7 +49,7 @@ localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 1
 Balance of '1Fa8U2ETHCQQHqhLwHS91xuURo8DXakRY1': 0
 localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 1P81XQuUWnJVZDWai8yXoxixTNvfkP3p3o
 Balance of '1P81XQuUWnJVZDWai8yXoxixTNvfkP3p3o': 94
-、、、
+```
 
 1. 创建blockchain，创建创世区块、创世交易的的功能放在了cli.send中，未来要分离
 2. ./BuildingBlockChain createwallet创建两个钱包
