@@ -7,7 +7,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/boltdb/bolt"
-	"fmt"
+	"crypto/ecdsa"
+	"crypto/rand"
 )
 const subsidy = 100
 type Transaction struct {
@@ -20,6 +21,7 @@ type TXInput struct {
 	Txid      []byte
 	Vout      int
 	Signature []byte
+	Pubkey    []byte
 }
 
 // TXOutput represents a transaction output
@@ -63,30 +65,46 @@ func (tx *Transaction) Hash() []byte {
 }
 
 
-// NewTXOutput create a new TXOutput
+// Lock signs the output  根据地址拿到pubkeyhash
+func (out *TXOutput) Lock(address []byte) {
+	pubKeyHash := Base58Decode(address)
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+	out.PubKeyHash = pubKeyHash
+}
+
+// NewTXOutput create a new TXOutput，解锁脚本是pubkeyhash
 func NewTXOutput(value int, address string) *TXOutput {
 	txo := &TXOutput{value, nil}
-	txo.PubKeyHash = []byte(address)
+	txo.Lock([]byte(address)) //现在存储的是pubkeyhash！
 	return txo
 }
 
 
 // NewCoinbaseTX creates a new coinbase transaction
-func NewCoinbaseTX(to string) *Transaction {
-	txin := TXInput{[]byte{}, -1, nil}
+func NewCoinbaseTX(to ,data string) *Transaction {
+	txin := TXInput{[]byte{}, -1, nil,[]byte(data)}
 	txout := NewTXOutput(subsidy, to)
 	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}}
 	tx.ID = tx.Hash()
 	return &tx
 }
 // CanBeUnlockedWith checks if the output can be unlocked with the provided data
-func (out *TXOutput) CanBeUnlockedWith(unlockingData string) bool {
-	return string(out.PubKeyHash) == unlockingData
+func (out *TXOutput) CanBeUnlockedWith(pubKeyHash []byte) bool {
+	return bytes.Compare(out.PubKeyHash, pubKeyHash) == 0
 }
 
+
+
+
+
+
+
+
 // CanUnlockOutputWith checks whether the address initiated the transaction
-func (in *TXInput) CanUnlockOutputWith(unlockingData string) bool {
-	return   string(in.Signature) == unlockingData
+func (in *TXInput) UsesKey(unlockingData []byte) bool {
+	lockingHash := HashPubKey(in.Pubkey)
+
+	return bytes.Compare(lockingHash, unlockingData) == 0
 }
 
 // IsCoinbase checks whether the transaction is coinbase
@@ -100,9 +118,13 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 	var inputs []TXInput
 	var outputs []TXOutput
 
-
-	//获取金额，必须要保证金额足够！
-	acc, validOutputs := bc.FindSpendableOutputs(from, amount)
+	wallets, err := NewWallets()
+	if err != nil {
+		log.Panic(err)
+	}
+	wallet := wallets.GetWallet(from)
+	pubKeyHash := HashPubKey(wallet.PublicKey)
+	acc, validOutputs := bc.FindSpendableOutputs(pubKeyHash, amount)
 
 	if acc < amount {
 		log.Panic("ERROR: Not enough funds")
@@ -116,21 +138,21 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 		}
 
 		for _, out := range outs {
-			input := TXInput{txID, out, []byte(from)}
+			input := TXInput{txID, out, nil,wallet.PublicKey}
 			inputs = append(inputs, input)
 		}
 	}
 
 	// Build a list of outputs
-	outputs = append(outputs, TXOutput{amount, []byte(to)})
+	outputs = append(outputs, *NewTXOutput(amount, to))
 	if acc > amount {
-		outputs = append(outputs, TXOutput{acc - amount, []byte(from)}) // a change
+		outputs = append(outputs, *NewTXOutput(acc-amount, from)) // a change
 	}
 
 	tx := Transaction{nil, inputs, outputs}
 	//交易的哈希值
 	tx.SetID()
-
+	bc.SignTransaction(&tx, wallet.PrivateKey)
 	return &tx
 }
 
@@ -152,7 +174,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 	}
 
 	newBlock := NewBlock(transactions, lastHash)
-	fmt.Println("\t1111111111111\n")
+
 	err = bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		err := b.Put(newBlock.Hash, newBlock.Serialize())
@@ -166,7 +188,56 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 		}
 
 		bc.tip = newBlock.Hash
-		fmt.Println("\t22222\n")
+
 		return nil
 	})
+}
+
+// Sign signs each input of a Transaction
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
+	if tx.IsCoinbase() {
+		return
+	}
+
+	for _, vin := range tx.Vin {
+		if prevTXs[hex.EncodeToString(vin.Txid)].ID == nil {
+			log.Panic("ERROR: Previous transaction is not correct")
+		}
+	}
+
+	txCopy := tx.TrimmedCopy()
+
+	for inID, vin := range txCopy.Vin {
+		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
+		txCopy.Vin[inID].Signature = nil
+		txCopy.Vin[inID].Pubkey = prevTx.Vout[vin.Vout].PubKeyHash
+		txCopy.ID = txCopy.Hash()
+		txCopy.Vin[inID].Pubkey = nil
+
+		r, s, err := ecdsa.Sign(rand.Reader, &privKey, txCopy.ID)
+		if err != nil {
+			log.Panic(err)
+		}
+		signature := append(r.Bytes(), s.Bytes()...)
+
+		tx.Vin[inID].Signature = signature
+	}
+}
+
+// TrimmedCopy creates a trimmed copy of Transaction to be used in signing
+func (tx *Transaction) TrimmedCopy() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for _, vin := range tx.Vin {
+		inputs = append(inputs, TXInput{vin.Txid, vin.Vout, nil, nil})
+	}
+
+	for _, vout := range tx.Vout {
+		outputs = append(outputs, TXOutput{vout.Value, vout.PubKeyHash})
+	}
+
+	txCopy := Transaction{tx.ID, inputs, outputs}
+
+	return txCopy
 }

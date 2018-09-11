@@ -11,6 +11,7 @@ import (
 )
 
 // Wallets stores a collection of wallets
+//地址链接一个钱包
 type Wallets struct {
 	Wallets map[string]*Wallet
 }

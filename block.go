@@ -117,44 +117,7 @@ func  TestcreateMerkelTreeRoot(Transactions  []*Transaction) []byte{
 	return mTree.RootNode.Data
 	//b.MerkleRoot= mTree.RootNode.Data
 }
-func	TestFuncTransactionToMerkletree(){
-	txin := TXInput{[]byte{}, -1, nil}
-	txout := NewTXOutput(subsidy, "first")
-	tx := Transaction{nil, []TXInput{txin}, []TXOutput{*txout}}
-	tx.ID = tx.Hash()
 
-	txin2 := TXInput{[]byte{}, -1, nil}
-	txout2 := NewTXOutput(subsidy, "second")
-	tx2 := Transaction{nil, []TXInput{txin2}, []TXOutput{*txout2}}
-	tx2.ID = tx2.Hash()
-
-	var Transactions  []*Transaction
-	Transactions = append(Transactions, &tx,&tx2)
-	fmt.Printf("%x\n",TestcreateMerkelTreeRoot(Transactions))
-}
-func Test_blockSerialize(){
-	block := &Block{int64(2),[]byte("abc"),[]byte("dfg"),time.Now().Unix(),int64(111111),100,[]*Transaction{},[]byte{}}
-	fmt.Printf("%x",block.serialize())
-}
-func Test_NewCoinbaseTX(){
-	newtx :=NewCoinbaseTX("tom")
-	fmt.Printf("%s",newtx.Vout)
-
-}
-
-func Test_NewBlockSerialize(){
-	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{},[]byte{}}
-	fmt.Printf("%x",block.serialize())
-
-}
-
-func Test_NewPow(){
-	block := &Block{2,[]byte("abc"),[]byte("dfg"),time.Now().Unix(),111111,100,[]*Transaction{},[]byte{}}
-	pow := NewProofOfWork(block)
-	nonce,_ :=pow.Run()
-	block.Nonce = nonce
-	fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
-}
 //产生初始区块,传入了第一笔coinbase交易
 func NewGenesisBlock(transactions []*Transaction) *Block {
 	block :=&Block{int64(2),[]byte{},[]byte("abc"),time.Now().Unix(),111111,100,transactions,[]byte{}}

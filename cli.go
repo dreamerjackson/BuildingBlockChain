@@ -55,7 +55,7 @@ func (cli *CLI) printChain() {
 
 
 func (cli *CLI) send(from, to string, amount int) {
-	bc := NewBlockchain(to)
+	bc := NewBlockchain(from)
 	defer bc.db.Close()
 
 	tx := NewUTXOTransaction(from, to, amount, bc)
@@ -70,7 +70,9 @@ func (cli *CLI) getBalance(address string) {
 	defer bc.db.Close()
 
 	balance := 0
-	UTXOs := bc.FindUTXO(address)
+	pubKeyHash := Base58Decode([]byte(address))
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+	UTXOs := bc.FindUTXO(pubKeyHash)
 
 	for _, out := range UTXOs {
 		balance += out.Value
