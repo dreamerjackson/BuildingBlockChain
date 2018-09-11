@@ -56,9 +56,9 @@ Balance of '1P81XQuUWnJVZDWai8yXoxixTNvfkP3p3o': 94
 3. ./BuildingBlockChain send -from 1P81XQuUWnJVZDWai8yXoxixTNvfkP3p3o  -to 14Si1pVjDur6mH7X5ssoFE43Cn41qtgmK1  -amount 6转账了100元给第一个地址，并执行了转账6元。
 4. 转账就涉及到utxo的查询，构建交易的时候就涉及到对交易的数字签名。
 
-、、、
+```
 交 流 群 名 称：
 Go底层公链
 交 流 群 号：
 713385260
-、、、
+```
