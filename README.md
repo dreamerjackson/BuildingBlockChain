@@ -77,6 +77,8 @@ localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 1
 Balance of '17pHuBtdV7qJPUZB47TxY9cDDpJ3vZ1zfc': 90
 localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 1B1oiRN6FYv7VBSwLLsWiyELYsMnK14DAb
 Balance of '1B1oiRN6FYv7VBSwLLsWiyELYsMnK14DAb': 10
+```
+
 
 ```
 交 流 群 名 称：
