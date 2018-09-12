@@ -55,7 +55,7 @@ func (cli *CLI) printChain() {
 
 
 func (cli *CLI) send(from, to string, amount int) {
-	bc := NewBlockchain(from)
+	bc := NewBlockchain()
 	defer bc.db.Close()
 
 	tx := NewUTXOTransaction(from, to, amount, bc)
@@ -66,7 +66,7 @@ func (cli *CLI) send(from, to string, amount int) {
 
 
 func (cli *CLI) getBalance(address string) {
-	bc := NewBlockchain(address)
+	bc := NewBlockchain()
 	defer bc.db.Close()
 
 	balance := 0
@@ -103,6 +103,18 @@ func (cli *CLI) listAddresses() {
 }
 
 
+func (cli *CLI) createBlockchain(address string) {
+	if !ValidateAddress(address) {
+		log.Panic("ERROR: Address is not valid")
+	}
+	bc := CreateBlockchain(address)
+	bc.db.Close()
+	fmt.Println("Done!")
+}
+
+
+
+
 // Run parses command line arguments and processes commands
 func (cli *CLI) Run() {
 	cli.validateArgs()
@@ -113,11 +125,15 @@ func (cli *CLI) Run() {
 	getBalanceCmd := flag.NewFlagSet("getbalance", flag.ExitOnError)
 	createWalletCmd := flag.NewFlagSet("createwallet", flag.ExitOnError)
 	listAddressesCmd := flag.NewFlagSet("listaddresses", flag.ExitOnError)
+	createBlockchainCmd := flag.NewFlagSet("createblockchain", flag.ExitOnError)
+
 
 	sendFrom := sendCmd.String("from", "", "Source wallet address")
 	sendTo := sendCmd.String("to", "", "Destination wallet address")
 	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 	getBalanceAddress := getBalanceCmd.String("address", "", "The address to get balance for")
+	createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
+
 	switch os.Args[1] {
 	case "getbalance":
 		err := getBalanceCmd.Parse(os.Args[2:])
@@ -149,6 +165,11 @@ func (cli *CLI) Run() {
 		if err != nil {
 			log.Panic(err)
 		}
+	case "createblockchain":
+		err := createBlockchainCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panic(err)
+		}
 	default:
 		cli.printUsage()
 		os.Exit(1)
@@ -177,6 +198,14 @@ func (cli *CLI) Run() {
 		}
 
 		cli.send(*sendFrom, *sendTo, *sendAmount)
+	}
+
+	if createBlockchainCmd.Parsed() {
+		if *createBlockchainAddress == "" {
+			createBlockchainCmd.Usage()
+			os.Exit(1)
+		}
+		cli.createBlockchain(*createBlockchainAddress)
 	}
 
 	if createWalletCmd.Parsed() {
