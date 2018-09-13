@@ -163,7 +163,7 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 
 // MineBlock mines a new block with the provided transactions
 //根据提供的交易，开始挖矿MineBlock（）
-func (bc *Blockchain) MineBlock(transactions []*Transaction) {
+func (bc *Blockchain) MineBlock(transactions []*Transaction)  *Block {
 	var lastHash []byte
 
 	//验证交易是有效的
@@ -204,6 +204,12 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) {
 
 		return nil
 	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return newBlock
 }
 
 // Sign signs each input of a Transaction
@@ -322,4 +328,40 @@ func (tx Transaction) String() string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+
+
+
+// TXOutputs collects TXOutput
+type TXOutputs struct {
+	Outputs []TXOutput
+}
+
+
+
+
+// Serialize serializes TXOutputs
+func (outs TXOutputs) Serialize() []byte {
+	var buff bytes.Buffer
+
+	enc := gob.NewEncoder(&buff)
+	err := enc.Encode(outs)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return buff.Bytes()
+}
+// DeserializeOutputs deserializes TXOutputs
+func DeserializeOutputs(data []byte) TXOutputs {
+	var outputs TXOutputs
+
+	dec := gob.NewDecoder(bytes.NewReader(data))
+	err := dec.Decode(&outputs)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return outputs
 }
