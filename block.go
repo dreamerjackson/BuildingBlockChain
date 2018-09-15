@@ -20,6 +20,7 @@ type Block struct {
 	Nonce         int64
 	Transactions  []*Transaction
 	Hash          []byte
+	Height        int
 }
 
 
@@ -120,7 +121,7 @@ func  TestcreateMerkelTreeRoot(Transactions  []*Transaction) []byte{
 
 //产生初始区块,传入了第一笔coinbase交易
 func NewGenesisBlock(transactions []*Transaction) *Block {
-	block :=&Block{int64(2),[]byte{},[]byte("abc"),time.Now().Unix(),111111,100,transactions,[]byte{}}
+	block :=&Block{int64(2),[]byte{},[]byte("abc"),time.Now().Unix(),111111,100,transactions,[]byte{},0}
 	pow := NewProofOfWork(block)
 	nonce, hash := pow.Run()
 	block.Hash = hash[:]
@@ -139,8 +140,8 @@ func NewGenesisBlock(transactions []*Transaction) *Block {
 	return block
 	}
 
-func NewBlock(transactions []*Transaction, prevBlockHash []byte) *Block{
-	block :=&Block{2,prevBlockHash,[]byte("dfg"),time.Now().Unix(),111111,0,transactions,[]byte{}}
+func NewBlock(transactions []*Transaction, prevBlockHash []byte, height int) *Block{
+	block :=&Block{2,prevBlockHash,[]byte("dfg"),time.Now().Unix(),111111,0,transactions,[]byte{},height}
 	pow := NewProofOfWork(block)
 	nonce, hash := pow.Run()
 	block.Hash = hash[:]

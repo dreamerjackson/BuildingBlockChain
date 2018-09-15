@@ -1,21 +1,28 @@
 # BuildingBlockChain
 
 
->1、增加findUTXO(）查找并返回所有的未花费的输出。
+>0、增加网络处理server.go
 
->2、增加 type TXOutputs struct {Outputs []TXOutput} 存储交易的输出，并添加序列化和反序列化的函数。
+>1、以前的程序，db文件的文件名都是硬编码的方式写入，现在传递了nodeID来标示不同的节点。所以在bolckchain文件中以及wallet文件中，都惊醒了大量的修改
 
->3、增加utxo_set文件，
+>2、增加 GetBestHeight()、GetBlock(blockHash []byte)根据区块链的hash获取区块、GetBlockHashes() [][]byte获取区块链中存在的全部区块的hash
 
->4、挖矿需要返回新区块，MineBlock(transactions []*Transaction)  *Block，在添加一个新的区块之后，应该调用updateutxo方法，更新数据库。
+>3、block结构体添加高度height，创世区块高度为0，在mineblock中都需要更新
+
+>4、修改CLI中的方法，都需要传递nodeID。
+
+>5、addBlock在之前是没有用的，现在将cli中的addBlock删除，现在由于有了网络，接受到的区块就可以添加到区块链中。
+
+>6、增加交易的反序列化操作DeserializeTransaction
 
 ```
-utxo_set文件
+// VerifyTransaction verifies transaction input signatures
+func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
+添加重要一步，如果是矿工的区块，那么直接返回true
+	if tx.IsCoinbase() {
+		return true
+	}
 
-1、FindSpendableOutputs 发现可花费的输出，但是是查询的文件UTXO
-2、FindUTXO(pubKeyHash []byte)     根据pubKeyHash查询，但是是查询的文件UTXO
-3、Reindex()  删除原始数据库、新建数据库，调用blockchian.go中的findutxo遍历区块链从新构建utxo数据库
-4、Update 更新utxo，当新挖到一个区块或者新建一个区块的时候，要跟新
 
 
 ```
@@ -24,44 +31,75 @@ utxo_set文件
 
 测试：
 ```
-localhost:BuildingBlockChain jackson$ ./BuildingBlockChain createwallet
-publkey = 44bbfb3a1a81df7924a11474b8a7e5361ee3c275d82141955f4bc72bcf776fa40eef7533a786b17769c0f1fb52e9877989e4a822ebfec8103f8bbeb50959ce84
-prikey  = 694edd6526bc1b27217f29c8f37ebc5de7d153511ce5798d1c18a5116909cdf1
-Your new address: 1BXZ4C9X9te3eRXNYsfkJq7tyFuHpk8yep
+第一个终端：
+export NODE_ID=3000
+localhost:BuildingBlockChain jackson$ go build .
+localhost:BuildingBlockChain jackson$ ./BuildingBlockChain createblockchain -address 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEPMining a new block
 
-localhost:BuildingBlockChain jackson$ ./BuildingBlockChain createwallet
-publkey = 7c6cc7ac19e71157a60ff19de47e9d1e587ee98570b808bf5d1de11678b8b5b4c08d40359edeafa58e1c4eb5115b995f45b4928fdf5440aa038400c5f571e099
-prikey  = f41862866a7eb34eed606fa88ca8099c45f688454d1c2cae79fa8629dfe6092f
-Your new address: 13AF1uHDartNnXEQWw7j8R7mic7GJC7FwF
+注意在这个地方，将生成的blockchain_3000.db数据库复制一个副本到blockchain_3001.db
 
-localhost:BuildingBlockChain jackson$ ./BuildingBlockChain createblockchain -address 1BXZ4C9X9te3eRXNYsfkJq7tyFuHpk8yep
-Mining a new block
 
 Prev. version: 2
 Prev. hash:
 merkleroot: abc
-time: 1536808748
+time: 1536984640
 nbits: 111111
-nonce: 32733
-Hash: 000095022232e71d25c6b8f7a0bbd5630fb4c9ebbebfcba53f3d18f7152ebc60
-7fdd
+nonce: 45673
+Hash: 0000c15394a826f86b4d538e48bc2a053882dd9e9caaffedf35c29c0c8be06cb
+b269
 PoW: true
 ------------------------------------------------------------
 
 Done!
-localhost:BuildingBlockChain jackson$ ./BuildingBlockChain send -from 1BXZ4C9X9te3eRXNYsfkJq7tyFuHpk8yep -to 13AF1uHDartNnXEQWw7j8R7mic7GJC7FwF -amount 5
+
+localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEPBalance of '18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP': 100
+localhost:BuildingBlockChain jackson$ ./BuildingBlockChain send -from 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP  -to 1MKQN5oVYwwWofQe3n45V6mupRsWQ1QmD5 -amount 10 -mine
+verify success
 verify success
 Mining a new block
 
 Success!
+localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEPBalance of '18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP': 190
+localhost:BuildingBlockChain jackson$ ./BuildingBlockChain startnode
+Starting node 3000
+Received version command
+Received getblocks command
+Received getdata command
+Received getdata command
 
-localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 1BXZ4C9X9te3eRXNYsfkJq7tyFuHpk8yep
-Balance of '1BXZ4C9X9te3eRXNYsfkJq7tyFuHpk8yep': 95
-localhost:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 13AF1uHDartNnXEQWw7j8R7mic7GJC7FwF
-Balance of '13AF1uHDartNnXEQWw7j8R7mic7GJC7FwF': 5
+```
 
 
 ```
+第二个终端：
+
+export NODE_ID=3001
+
+没有同步前，数据库中存储的金额是100
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP
+Balance of '18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP': 100
+
+
+
+同步后，接受到了数据，并将其添加到了数据库中。
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain startnode
+Starting node 3001
+Received version command
+Received inv command
+Recevied inventory with 2 block
+Received block command
+Recevied a new block!
+Added block 0000504829f3f877acf18ede4d68193cf2be3c1476c30095550a1b1015181ad8
+Received block command
+Recevied a new block!
+Added block 0000c15394a826f86b4d538e48bc2a053882dd9e9caaffedf35c29c0c8be06cb
+^C
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP
+Balance of '18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP': 190
+
+
+```
+
 
 
 ```

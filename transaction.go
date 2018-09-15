@@ -118,11 +118,11 @@ func (tx Transaction) IsCoinbase() bool {
 
 // NewUTXOTransaction creates a new transaction
 //根据发送者，接受者，金额，创建一笔新的交易NewUTXOTransaction（）
-func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transaction {
+func NewUTXOTransaction(from, to string, amount int, bc *Blockchain, nodeID string) *Transaction {
 	var inputs []TXInput
 	var outputs []TXOutput
 
-	wallets, err := NewWallets()
+	wallets, err := NewWallets(nodeID)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -165,8 +165,9 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain) *Transactio
 //根据提供的交易，开始挖矿MineBlock（）
 func (bc *Blockchain) MineBlock(transactions []*Transaction)  *Block {
 	var lastHash []byte
-
+	var lastHeight int
 	//验证交易是有效的
+
 	for _, tx := range transactions {
 		if bc.VerifyTransaction(tx) != true {
 			log.Panic("ERROR: Invalid transaction")
@@ -179,6 +180,12 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction)  *Block {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
 
+		blockData := b.Get(lastHash)
+		block := DeserializeBlock(blockData)
+
+		lastHeight = block.Height
+
+
 		return nil
 	})
 
@@ -186,7 +193,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction)  *Block {
 		log.Panic(err)
 	}
 
-	newBlock := NewBlock(transactions, lastHash)
+	newBlock := NewBlock(transactions, lastHash, lastHeight+1)
 
 	err = bc.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
@@ -364,4 +371,18 @@ func DeserializeOutputs(data []byte) TXOutputs {
 	}
 
 	return outputs
+}
+
+//交易的反序列化
+// DeserializeTransaction deserializes a transaction
+func DeserializeTransaction(data []byte) Transaction {
+	var transaction Transaction
+
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	err := decoder.Decode(&transaction)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return transaction
 }
