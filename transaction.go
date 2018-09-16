@@ -287,9 +287,12 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	curve := elliptic.P256()
 
 	for inID, vin := range tx.Vin {
+
 		prevTx := prevTXs[hex.EncodeToString(vin.Txid)]
 		txCopy.Vin[inID].Signature = nil
 		txCopy.Vin[inID].Pubkey = prevTx.Vout[vin.Vout].PubKeyHash
+
+
 		txCopy.ID = txCopy.Hash()
 		txCopy.Vin[inID].Pubkey = nil
 
@@ -305,6 +308,8 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 		x.SetBytes(vin.Pubkey[:(keyLen / 2)])
 		y.SetBytes(vin.Pubkey[(keyLen / 2):])
 
+
+		fmt.Println(txCopy.String())
 		rawPubKey := ecdsa.PublicKey{curve, &x, &y}
 		if ecdsa.Verify(&rawPubKey, txCopy.ID, &r, &s) == false {
 			return false

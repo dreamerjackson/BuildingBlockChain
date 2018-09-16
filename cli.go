@@ -27,8 +27,10 @@ func (cli *CLI) validateArgs() {
 }
 
 
-func (cli *CLI) printChain() {
-	bci := cli.bc.Iterator()
+func (cli *CLI) printChain(nodeID string) {
+	bc := NewBlockchain(nodeID)
+	defer bc.db.Close()
+	bci := bc.Iterator()
 
 	for {
 		block := bci.Next()
@@ -64,7 +66,13 @@ func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
 	defer bc.db.Close()
 
 	tx := NewUTXOTransaction(from, to, amount, bc,nodeID)
-
+	fmt.Printf("slide-----%v------------1\n",bc.VerifyTransaction(tx))
+	seriatx := DeserializeTransaction((*tx).Serialize())
+	seriatx2:= DeserializeTransaction(gobEncode(tx))
+	fmt.Printf("slide-----%v------------2\n",bc.VerifyTransaction(&seriatx))
+	fmt.Printf("slide-----%v------------3\n",bc.VerifyTransaction(&seriatx2))
+	fmt.Println(tx.String())
+	fmt.Printf("%x",gobEncode(tx))
 	if mineNow {
 		cbTx := NewCoinbaseTX(from, "")
 		txs := []*Transaction{cbTx, tx}
@@ -222,7 +230,7 @@ func (cli *CLI) Run() {
 
 
 	if printChainCmd.Parsed() {
-		cli.printChain()
+		cli.printChain(nodeID)
 	}
 
 

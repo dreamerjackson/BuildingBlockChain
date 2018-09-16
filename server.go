@@ -289,7 +289,7 @@ func handleGetData(request []byte, bc *Blockchain) {
 	if payload.Type == "tx" {
 		txID := hex.EncodeToString(payload.ID)
 		tx := mempool[txID]
-
+//fmt.Printf("\nSignature================%x\n",tx.Vin[0].Signature)
 		sendTx(payload.AddrFrom, &tx)
 		// delete(mempool, txID)
 	}
@@ -308,16 +308,30 @@ func handleTx(request []byte, bc *Blockchain) {
 
 	txData := payload.Transaction
 	tx := DeserializeTransaction(txData)
+	fmt.Println(tx.String())
+	fmt.Printf("\n%x  ||||||fu1\n",txData)
 	mempool[hex.EncodeToString(tx.ID)] = tx
 
+
+
 	if nodeAddress == knownNodes[0] {
+
+		var txs []*Transaction
+		for id := range mempool {
+			tx := mempool[id]
+			if bc.VerifyTransaction(&tx) {
+				txs = append(txs, &tx)
+			}
+		}
 		for _, node := range knownNodes {
 			if node != nodeAddress && node != payload.AddFrom {
 				sendInv(node, "tx", [][]byte{tx.ID})
 			}
 		}
 	} else {
-		if len(mempool) >= 2 && len(miningAddress) > 0 {
+
+		if len(mempool) >= 1 && len(miningAddress) > 0 {
+
 		MineTransactions:
 			var txs []*Transaction
 
@@ -337,6 +351,7 @@ func handleTx(request []byte, bc *Blockchain) {
 			txs = append(txs, cbTx)
 
 			newBlock := bc.MineBlock(txs)
+
 			UTXOSet := UTXOSet{bc}
 			UTXOSet.Reindex()
 

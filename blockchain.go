@@ -366,6 +366,7 @@ func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
 			log.Panic(err)
 		}
 		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+
 	}
 
 	return tx.Verify(prevTXs)

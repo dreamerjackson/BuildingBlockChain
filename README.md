@@ -15,6 +15,8 @@
 
 >6、增加交易的反序列化操作DeserializeTransaction
 
+>7、修改cli中printblockchain方法
+
 ```
 // VerifyTransaction verifies transaction input signatures
 func (bc *Blockchain) VerifyTransaction(tx *Transaction) bool {
@@ -101,6 +103,27 @@ Balance of '18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP': 190
 ```
 
 
+
+
+>测试2：
+```
+#3000
+
+bogon:BuildingBlockChain jackson$  export NODE_ID=3000
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain createblockchain -address 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain startnode
+
+#3002
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain startnode -miner 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP
+
+
+#3001
+
+bogon:BuildingBlockChain jackson$  export NODE_ID=3001
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain send -from 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP  -to 1MKQN5oVYwwWofQe3n45V6mupRsWQ1QmD5 -amount 1
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain getbalance -address 18fHTVuCgUwz1MHCVCb69jAark5KGg5QEP
+bogon:BuildingBlockChain jackson$ ./BuildingBlockChain printchain
+```
 
 ```
 交 流 群 名 称：
