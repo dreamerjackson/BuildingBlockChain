@@ -5,6 +5,7 @@ import (
 	"github.com/boltdb/bolt"
 	"os"
 
+	"fmt"
 )
 
 const dbFile = "blockchain_%s.db"
@@ -78,6 +79,63 @@ func dbExists(dbFile string) bool {
 
 
 
+// MineBlock mines a new block with the provided transactions
+//根据提供的交易，开始挖矿MineBlock（）
+func (bc *Blockchain) MineBlock(transactions []*Transaction)  *Block {
+	var lastHash []byte
+	var lastHeight int
+	//验证交易是有效的
+
+	for _, tx := range transactions {
+		if bc.VerifyTransaction(tx) != true {
+			log.Panic("ERROR: Invalid transaction")
+		}else{
+			fmt.Println("verify success")
+		}
+	}
+
+	err := bc.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		lastHash = b.Get([]byte("l"))
+
+		blockData := b.Get(lastHash)
+		block := DeserializeBlock(blockData)
+
+		lastHeight = block.Height
+
+
+		return nil
+	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	newBlock := NewBlock(transactions, lastHash, lastHeight+1)
+
+	err = bc.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		err := b.Put(newBlock.Hash, newBlock.Serialize())
+		if err != nil {
+			log.Panic(err)
+		}
+
+		err = b.Put([]byte("l"), newBlock.Hash)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		bc.tip = newBlock.Hash
+
+		return nil
+	})
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return newBlock
+}
 
 
 

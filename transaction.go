@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/boltdb/bolt"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/elliptic"
@@ -21,31 +20,34 @@ type Transaction struct {
 	Vout []TXOutput
 }
 
-type TXInput struct {
-	Txid      []byte
-	Vout      int
-	Signature []byte
-	Pubkey    []byte
-}
 
-// TXOutput represents a transaction output
-type TXOutput struct {
-	Value      int
-	PubKeyHash []byte
-}
+// String returns a human-readable representation of a transaction
+func (tx Transaction) String() string {
+	var lines []string
 
-// Serialize returns a serialized Transaction
-func (tx Transaction) Serialize() []byte {
-	var encoded bytes.Buffer
+	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
 
-	enc := gob.NewEncoder(&encoded)
-	err := enc.Encode(tx)
-	if err != nil {
-		log.Panic(err)
+	for i, input := range tx.Vin {
+
+		lines = append(lines, fmt.Sprintf("     Input %d:", i))
+		lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
+		lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
+		lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
+		lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.Pubkey))
 	}
 
-	return encoded.Bytes()
+	for i, output := range tx.Vout {
+		lines = append(lines, fmt.Sprintf("     Output %d:", i))
+		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
+		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+	}
+
+	return strings.Join(lines, "\n")
 }
+
+
+
+
 // SetID sets ID of a transaction
 func (tx *Transaction) SetID() {
 	var encoded bytes.Buffer
@@ -69,19 +71,7 @@ func (tx *Transaction) Hash() []byte {
 }
 
 
-// Lock signs the output  根据地址拿到pubkeyhash
-func (out *TXOutput) Lock(address []byte) {
-	pubKeyHash := Base58Decode(address)
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	out.PubKeyHash = pubKeyHash
-}
 
-// NewTXOutput create a new TXOutput，解锁脚本是pubkeyhash
-func NewTXOutput(value int, address string) *TXOutput {
-	txo := &TXOutput{value, nil}
-	txo.Lock([]byte(address)) //现在存储的是pubkeyhash！
-	return txo
-}
 
 
 // NewCoinbaseTX creates a new coinbase transaction
@@ -102,14 +92,6 @@ func (out *TXOutput) CanBeUnlockedWith(pubKeyHash []byte) bool {
 
 
 
-
-
-// CanUnlockOutputWith checks whether the address initiated the transaction
-func (in *TXInput) UsesKey(unlockingData []byte) bool {
-	lockingHash := HashPubKey(in.Pubkey)
-
-	return bytes.Compare(lockingHash, unlockingData) == 0
-}
 
 // IsCoinbase checks whether the transaction is coinbase
 func (tx Transaction) IsCoinbase() bool {
@@ -161,63 +143,6 @@ func NewUTXOTransaction(from, to string, amount int, bc *Blockchain, nodeID stri
 }
 
 
-// MineBlock mines a new block with the provided transactions
-//根据提供的交易，开始挖矿MineBlock（）
-func (bc *Blockchain) MineBlock(transactions []*Transaction)  *Block {
-	var lastHash []byte
-	var lastHeight int
-	//验证交易是有效的
-
-	for _, tx := range transactions {
-		if bc.VerifyTransaction(tx) != true {
-			log.Panic("ERROR: Invalid transaction")
-		}else{
-			fmt.Println("verify success")
-		}
-	}
-
-	err := bc.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		lastHash = b.Get([]byte("l"))
-
-		blockData := b.Get(lastHash)
-		block := DeserializeBlock(blockData)
-
-		lastHeight = block.Height
-
-
-		return nil
-	})
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	newBlock := NewBlock(transactions, lastHash, lastHeight+1)
-
-	err = bc.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(blocksBucket))
-		err := b.Put(newBlock.Hash, newBlock.Serialize())
-		if err != nil {
-			log.Panic(err)
-		}
-
-		err = b.Put([]byte("l"), newBlock.Hash)
-		if err != nil {
-			log.Panic(err)
-		}
-
-		bc.tip = newBlock.Hash
-
-		return nil
-	})
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	return newBlock
-}
 
 // Sign signs each input of a Transaction
 func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
@@ -318,64 +243,18 @@ func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
 	return true
 }
 
-// String returns a human-readable representation of a transaction
-func (tx Transaction) String() string {
-	var lines []string
 
-	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.ID))
+// Serialize returns a serialized Transaction
+func (tx Transaction) Serialize() []byte {
+	var encoded bytes.Buffer
 
-	for i, input := range tx.Vin {
-
-		lines = append(lines, fmt.Sprintf("     Input %d:", i))
-		lines = append(lines, fmt.Sprintf("       TXID:      %x", input.Txid))
-		lines = append(lines, fmt.Sprintf("       Out:       %d", input.Vout))
-		lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
-		lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.Pubkey))
-	}
-
-	for i, output := range tx.Vout {
-		lines = append(lines, fmt.Sprintf("     Output %d:", i))
-		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
-		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
-	}
-
-	return strings.Join(lines, "\n")
-}
-
-
-
-
-// TXOutputs collects TXOutput
-type TXOutputs struct {
-	Outputs []TXOutput
-}
-
-
-
-
-// Serialize serializes TXOutputs
-func (outs TXOutputs) Serialize() []byte {
-	var buff bytes.Buffer
-
-	enc := gob.NewEncoder(&buff)
-	err := enc.Encode(outs)
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(tx)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	return buff.Bytes()
-}
-// DeserializeOutputs deserializes TXOutputs
-func DeserializeOutputs(data []byte) TXOutputs {
-	var outputs TXOutputs
-
-	dec := gob.NewDecoder(bytes.NewReader(data))
-	err := dec.Decode(&outputs)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	return outputs
+	return encoded.Bytes()
 }
 
 //交易的反序列化
