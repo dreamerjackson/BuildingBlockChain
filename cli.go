@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strconv"
 	"log"
 )
 
@@ -27,128 +26,7 @@ func (cli *CLI) validateArgs() {
 }
 
 
-func (cli *CLI) printChain(nodeID string) {
-	bc := NewBlockchain(nodeID)
-	defer bc.db.Close()
-	bci := bc.Iterator()
 
-	for {
-		block := bci.Next()
-		fmt.Printf("Prev. version: %s\n", strconv.FormatInt(block.Version,10))
-		fmt.Printf("Prev. hash: %x\n",block.PrevBlockHash)
-		fmt.Printf("merkleroot: %s\n", block.MerkleRoot)
-		fmt.Printf("time: %s\n", strconv.FormatInt(block.Timestamp,10))
-		fmt.Printf("nbits: %s\n", strconv.FormatInt(block.Nbits,10))
-		fmt.Printf("nonce: %s\n", strconv.FormatInt(block.Nonce,10))
-		fmt.Printf("Hash: %x\n", block.Hash)
-		pow := NewProofOfWork(block)
-		fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
-		fmt.Println()
-
-		if len(block.PrevBlockHash) == 0 {
-			break
-		}
-	}
-}
-
-
-func (cli *CLI) send(from, to string, amount int, nodeID string, mineNow bool) {
-	if !ValidateAddress(from) {
-		log.Panic("ERROR: Sender address is not valid")
-	}
-	if !ValidateAddress(to) {
-		log.Panic("ERROR: Recipient address is not valid")
-	}
-
-
-	bc := NewBlockchain(nodeID)
-	UTXOSet := UTXOSet{bc}
-	defer bc.db.Close()
-
-	tx := NewUTXOTransaction(from, to, amount, bc,nodeID)
-	fmt.Printf("slide-----%v------------1\n",bc.VerifyTransaction(tx))
-	seriatx := DeserializeTransaction((*tx).Serialize())
-	seriatx2:= DeserializeTransaction(gobEncode(tx))
-	fmt.Printf("slide-----%v------------2\n",bc.VerifyTransaction(&seriatx))
-	fmt.Printf("slide-----%v------------3\n",bc.VerifyTransaction(&seriatx2))
-	fmt.Println(tx.String())
-	fmt.Printf("%x",gobEncode(tx))
-	if mineNow {
-		cbTx := NewCoinbaseTX(from, "")
-		txs := []*Transaction{cbTx, tx}
-
-		newBlock := bc.MineBlock(txs)
-
-		UTXOSet.Update(newBlock)
-	} else {
-		sendTx(knownNodes[0], tx)
-	}
-	fmt.Println("Success!")
-}
-
-
-func (cli *CLI) getBalance(address string, nodeID string) {
-	bc := NewBlockchain(nodeID)
-	defer bc.db.Close()
-
-	balance := 0
-	pubKeyHash := Base58Decode([]byte(address))
-	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
-	UTXOs := bc.FindUTXObypubkeyhash(pubKeyHash)
-
-	for _, out := range UTXOs {
-		balance += out.Value
-	}
-
-	fmt.Printf("Balance of '%s': %d\n", address, balance)
-}
-
-
-func (cli *CLI) createWallet(nodeID string) {
-	wallets, _ := NewWallets(nodeID)
-	address := wallets.CreateWallet()
-	wallets.SaveToFile(nodeID)
-
-	fmt.Printf("Your new address: %s\n", address)
-}
-
-func (cli *CLI) listAddresses(nodeID string) {
-	wallets, err := NewWallets(nodeID)
-	if err != nil {
-		log.Panic(err)
-	}
-	addresses := wallets.GetAddresses()
-
-	for _, address := range addresses {
-		fmt.Println(address)
-	}
-}
-
-
-func (cli *CLI) createBlockchain(address string, nodeID string) {
-	if !ValidateAddress(address) {
-		log.Panic("ERROR: Address is not valid")
-	}
-	bc := CreateBlockchain(address, nodeID)
-	defer bc.db.Close()
-//创建新区块链的时候，从新设置UTOX数据库
-	UTXOSet := UTXOSet{bc}
-	UTXOSet.Reindex()
-
-	fmt.Println("Done!")
-}
-
-func (cli *CLI) startNode(nodeID, minerAddress string) {
-	fmt.Printf("Starting node %s\n", nodeID)
-	if len(minerAddress) > 0 {
-		if ValidateAddress(minerAddress) {
-			fmt.Println("Mining is on. Address to receive rewards: ", minerAddress)
-		} else {
-			log.Panic("Wrong miner address!")
-		}
-	}
-	StartServer(nodeID, minerAddress)
-}
 
 
 
